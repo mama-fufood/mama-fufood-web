@@ -3,20 +3,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="robots" content="noindex">
-  <script>
-    // 示範版跟正式版同一個網域,localStorage 是共用的:這一頁所有的 key 加上前綴,
-    // 讀不到正式版的管理員 session,也不會寫進正式版的資料。一定要在其他 script 之前執行。
-    (function () {
-      var PREFIX = "demo-en:";
-      var S = Storage.prototype;
-      var getItem = S.getItem, setItem = S.setItem, removeItem = S.removeItem;
-      S.getItem = function (k) { return getItem.call(this, PREFIX + k); };
-      S.setItem = function (k, v) { return setItem.call(this, PREFIX + k, v); };
-      S.removeItem = function (k) { return removeItem.call(this, PREFIX + k); };
-    })();
-  </script>
+  <!-- 內容安全政策:只執行這個網站自己的 script 與 Google 登入元件,不執行 HTML 裡的行內 script。後端網址(js/config.js 的 apiBase)換了主機時,connect-src 要一起改 -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data:; connect-src 'self' https://router-backend-3hl2.onrender.com https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; object-src 'none'; base-uri 'self'; form-action 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <script src="storage-prefix.js"></script>
   <title>mama-fufood</title>
   <meta name="description" content="An app for logging a baby's first foods: what they ate, how much, and whether there was an allergic reaction. Records stay on your phone and in your own Google Drive.">
   <link rel="icon" type="image/png" href="../favicon.png">
@@ -79,18 +70,6 @@
   <script src="api.js"></script>
   <script src="../js/md.js"></script>
   <script src="home.js"></script>
-  <script>
-    // 示範版:不用 Google 帳號也能進後台。登入後(出現「管理後台」入口)就藏起來。
-    (function () {
-      var b = document.getElementById("demo-guest");
-      var admin = document.getElementById("admin-link");
-      function sync() { b.hidden = !!window.mffApi.token() && !admin.hidden; }
-      b.hidden = !!window.mffApi.token();
-      new MutationObserver(sync).observe(admin, { attributes: true });
-      b.onclick = function () { window.mffApi.setToken("demo"); location.reload(); };
-    })();
-  </script>
-  <script src="https://accounts.google.com/gsi/client?hl=en" async defer onload="window.mffHomeGsiReady && window.mffHomeGsiReady()"
-    onerror="document.getElementById('login-note').textContent = 'Could not load Google Sign-In (the rest of the site still works).'"></script>
+  <script src="guest.js"></script>
 </body>
 </html>

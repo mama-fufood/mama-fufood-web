@@ -20,7 +20,7 @@
   let foodGroup = null;
   // 每次載入都拿一個序號;慢的舊回應回來時,序號已經不是最新的就丟掉,不蓋掉新的畫面
   // (快速連按篩選或連續編輯時,舊的回應可能比新的晚到)。
-  const gen = { data: 0, feedback: 0, detail: 0 };
+  const gen = { data: 0, feedback: 0, detail: 0, system: 0 };
   let feedbackFilters = { kind: "", status: "", app_version: "", device_model: "", page: 1 };
 
   function message(text, kind) {
@@ -352,10 +352,39 @@
   }
 
   // ── 系統 ────────────────────────────────────────────────
+  // 操作紀錄的動作代碼(後端 audit.py 的 ACTIONS),新增時兩邊一起加;不認得的代碼原樣顯示。
+  const AUDIT_ACTIONS = {
+    login: "登入", logout_all: "登出所有裝置",
+    group_create: "新增分組", group_update: "修改分組", group_delete: "刪除分組",
+    food_create: "新增食材", food_update: "修改食材", food_delete: "刪除食材",
+    unit_create: "新增單位", unit_update: "修改單位", unit_delete: "刪除單位",
+    publish: "發布公用資料", cache_reload: "重新載入快取", app_config_update: "修改 App 版本設定",
+    feedback_update: "更新意見回饋", feedback_delete: "刪除意見回饋", feedback_delete_by_email: "個資刪除請求",
+    admin_add: "新增管理員", admin_remove: "移除管理員",
+  };
+  const auditDetail = (d) => Object.entries(d || {})
+    .map(([k, v]) => `${k}=${typeof v === "string" ? v : JSON.stringify(v)}`).join(", ");
+
+  function auditCards(a) {
+    const rows = a.items.map((i) => `<tr><td>${esc(fmtTime(i.at))}</td><td>${esc(i.email)}</td>
+      <td>${esc(AUDIT_ACTIONS[i.action] || i.action)}</td><td>${esc(auditDetail(i.detail))}</td></tr>`).join("");
+    return `<div class="card"><h3 style="margin-top:0">登入狀態</h3>
+        <p class="muted">懷疑後台的登入狀態外流（例如在別人的電腦登入過）時，可以登出這個帳號在所有瀏覽器上的後台，包含這一台。</p>
+        <button id="logout-all" class="danger">登出所有裝置</button>
+      </div>
+      <div class="card"><h3 style="margin-top:0">操作紀錄</h3>
+        <p class="muted">最近 ${esc(a.items.length)} 筆，保留 ${esc(a.retention_days)} 天；不記 IP。</p>
+        ${a.items.length ? `<div class="scroll-x"><table><thead><tr><th>時間</th><th>管理員</th><th>動作</th><th>內容</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="muted">還沒有紀錄。</p>'}
+      </div>`;
+  }
+
   async function loadSystem() {
+    const mine = ++gen.system;
     await run(async () => {
       const o = await api.call("GET", "/api/admin/overview");
       const f = await api.call("GET", "/api/admin/formats");
+      const a = await api.call("GET", "/api/admin/audit");
+      if (mine !== gen.system) return;
       const cache = o.cache.loaded ? Object.entries(o.cache.datasets).map(([k, v]) => `${k}=${v}`).join("、") : "還沒載入";
       const db = Object.entries(o.releases).map(([k, v]) => `${k}=${v.version}`).join("、");
       $("tab-system").innerHTML = `<div class="card">
@@ -368,8 +397,17 @@
       <div class="card"><h3 style="margin-top:0">匯出格式定義（跟著後端程式發布，只能看）</h3>
         ${f.formats.map((x) => `<details><summary>第 ${x.format_version} 版（${esc(x.status)}，最低 App ${esc(x.min_app_version)}）</summary>
           <pre class="log">${esc(JSON.stringify(x.definition, null, 1))}</pre></details>`).join("")}
-      </div>`;
+      </div>
+      ${auditCards(a)}`;
       $("reload-cache").onclick = () => run(async () => { await api.call("POST", "/api/admin/cache/reload"); await loadSystem(); }, "已重新載入");
+      $("logout-all").onclick = () => {
+        if (!confirm("確定登出這個帳號在所有瀏覽器上的後台？這一台也會登出。")) return;
+        run(async () => {
+          await api.call("POST", "/api/admin/logout-all");
+          api.setToken(null);
+          showLogin();
+        });
+      };
     });
   }
 

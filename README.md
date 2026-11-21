@@ -39,7 +39,17 @@ mama-fufood/                     ← meta-repo,本機開發統一入口,本身�
 
 ### 前端的鎖只是方便,權限在後端
 
-首頁只有管理員登入後才顯示「管理後台」的入口,但這只是方便,不是安全措施:任何人都能直接打開 `admin.html`(沒有登入狀態時,這一頁會直接跳回首頁;登入只在首頁做,按「登出」也會回到首頁)。真正的檢查在後端:`/api/admin/*` 的每一個請求都要帶管理員的 session,而且後端每次都會確認「這個 Email 現在還是不是管理員」;不是管理員的人打後台 API 一律被拒。後端的 CORS 也只允許這個網站的網址(與本機預覽的 `http://localhost:8003`)呼叫後台 API。
+首頁只有管理員登入後才顯示「管理後台」的入口,但這只是方便,不是安全措施:任何人都能直接打開 `admin.html`(沒有登入狀態時,這一頁會直接跳回首頁;登入只在首頁做,按「登出」也會回到首頁)。真正的檢查在後端:`/api/admin/*` 的每一個請求都要帶管理員的 session,而且後端每次都會確認「這個 Email 現在還是不是管理員」;不是管理員的人打後台 API 一律被拒。後端的 CORS 也只允許這個網站的網址呼叫後台 API(本機預覽時,是本機的後端另外允許 `http://localhost:8003`)。
+
+### 內容安全政策:只執行自己的 script
+
+三個頁面的 `<head>` 都有一行內容安全政策(`Content-Security-Policy`):萬一頁面被塞進一段 script(例如顯示的資料漏了跳脫),瀏覽器也不會執行它。
+
+- script 只執行這個網站自己的檔案,首頁另外允許 Google 登入元件(`https://accounts.google.com/gsi/client`);HTML 裡的行內 script 與 `onclick` 這類事件屬性一律不執行。所以 `legal.html` 的程式放在 `js/legal.js`,Google 登入元件由 `js/home.js` 載入。
+- 連線只允許這個網站自己、後端,以及首頁的 Google 登入。**改了後端的主機(`js/config.js` 的 `apiBase`)時,`index.html` 與 `admin.html` 的 `connect-src` 要一起改**,不然瀏覽器會擋下對新主機的請求。`python3 demo/tools/build.py` 會檢查兩邊一致,不一致就報錯。
+- 樣式允許行內寫法(`'unsafe-inline'`):後台畫面用了不少 `style="…"`,行內樣式不能執行程式。
+- GitHub Pages 不能自訂回應標頭,所以政策寫在 `<meta>` 裡;`frame-ancestors`(不讓別的網站用 iframe 嵌入)只能用標頭設定,目前沒有。
+- 示範版(`demo/`、`demo-en/`)沿用同一份政策;示範版自己加的 script 也放成檔案(由 `demo/tools/build.py` 產生)。
 
 ### 登入:Google 的憑證只用一次
 
@@ -48,6 +58,8 @@ Google 的 ID token 大約一小時就過期,不能當長期憑證,否則後台�
 - 管理員登入時,網頁把 Google 的憑證送到後端,後端驗證後發一張我們自己的 session token;之後的請求都帶這張(`js/api.js`)。
 - session token 存在這個瀏覽器的 `localStorage`;滑動式有效期,連續 90 天沒用才過期。後端回 401 時就清掉,讓使用者重新登入。
 - 首頁的 Google 登入,憑證也只送到後端確認是不是管理員,用完即丟(隱私權政策第二條寫明)。
+- 「系統」分頁有「登出所有裝置」:這個帳號在所有瀏覽器上的後台 session 一次失效(包含這一台),懷疑登入狀態外流時用。
+- 「系統」分頁也列出最近的操作紀錄:哪位管理員、什麼時候、做了什麼(後端保留 365 天,不記 IP)。
 
 ### 條款與政策是 Markdown,和 App 內建的是同一份
 
@@ -57,7 +69,7 @@ Google 的 ID token 大約一小時就過期,不能當長期憑證,否則後台�
 
 ### 慢回應不能蓋掉新畫面
 
-後台的資料都是非同步讀的。如果在一個請求還沒回來時就切到別的分頁、或按了重新整理,晚到的舊回應可能把新畫面整個重畫掉(例如剛勾好的選項被清空)。`js/admin.js` 對「公用資料」「意見回饋列表」「意見回饋內容」各有一個世代計數(`gen`):每次發出請求就加一,回應回來時如果世代已經不是最新的,就直接丟掉。
+後台的資料都是非同步讀的。如果在一個請求還沒回來時就切到別的分頁、或按了重新整理,晚到的舊回應可能把新畫面整個重畫掉(例如剛勾好的選項被清空)。`js/admin.js` 對「公用資料」「意見回饋列表」「意見回饋內容」「系統」各有一個世代計數(`gen`):每次發出請求就加一,回應回來時如果世代已經不是最新的,就直接丟掉。
 
 ### 後端在休眠時
 
@@ -76,6 +88,7 @@ js/
   ├── config.js          網站設定:後端網址、Google 用戶端 ID、Google Play 網址
   ├── api.js             呼叫後端、保存管理員 session
   ├── md.js              很小的 Markdown 轉換器(先跳脫 HTML)
+  ├── legal.js           legal.html 依 ?doc= 顯示哪一份文件
   ├── home.js            首頁的 Google 登入與後台入口
   └── admin.js           管理後台的五個分頁
 legal/                  條款、政策、判斷邏輯說明、資料運用原則、政策版本(和 App 內建的是同一份)
@@ -88,7 +101,7 @@ favicon.png、apple-touch-icon.png、icon_256.png   圖示
 - **還沒有實際部署過**;`js/config.js` 的 Google 用戶端 ID 與 Google Play 網址都還是空的。
 - 沒有自動化測試,改了之後要自己在瀏覽器上點過一次。
 - 管理後台要後端醒著才能用;後端剛喚醒時,第一個動作可能要等將近一分鐘。
-- 本機預覽管理後台時,要暫時把 `js/config.js` 的後端網址改成本機的(見 SOP Part A),**改完記得改回來,不要提交**。
+- 本機預覽管理後台時,要暫時把 `js/config.js` 的後端網址改成本機的,並在 `index.html`、`admin.html` 的 `connect-src` 加上本機後端(見 SOP Part A),**改完記得改回來,不要提交**。
 
 ---
 
@@ -105,13 +118,13 @@ python3 -m http.server 8003
 
 瀏覽器打開 `http://localhost:8003`。首頁、條款與政策不需要後端,打開就看得到。
 
-`8003` 不要隨便改:Google 登入會連 port 一起比對「已授權的 JavaScript 來源」,後端的 `ALLOWED_ORIGINS` 也是。
+`8003` 不要隨便改:Google 登入會連 port 一起比對「已授權的 JavaScript 來源」,本機後端的 `MAMA_FUFOOD__ALLOWED_ORIGINS` 也是。
 
 ### 2.(要試管理後台時)接上本機的後端
 
-1. 照 `mama-fufood-backend` 的 README 把後端跑在 `http://localhost:5003`,`.env` 填好 `GOOGLE_CLIENT_ID`、`FIRST_ADMIN_EMAIL`、`SESSION_SECRET`,`ALLOWED_ORIGINS` 包含 `http://localhost:8003`(範本已經有)。
+1. 照 router-backend 的 README(「本機」一節)把後端跑起來:`http://localhost:5010`,媽媽記副食品在 `/mama-fufood` 底下。`router-backend/.env` 填好 `MAMA_FUFOOD__DATABASE_URL`(本機的資料庫)、`MAMA_FUFOOD__GOOGLE_CLIENT_ID`、`MAMA_FUFOOD__FIRST_ADMIN_EMAIL`、`MAMA_FUFOOD__SESSION_SECRET`,`MAMA_FUFOOD__ALLOWED_ORIGINS` 填 `http://localhost:8003`。
 2. Google Cloud 的「網頁應用程式」用戶端,「已授權的 JavaScript 來源」要有 `http://localhost:8003`。
-3. 暫時改 `js/config.js`:`apiBase` 改成 `http://localhost:5003`、`googleClientId` 填網頁應用程式的用戶端 ID。**試完把 `apiBase` 改回正式的網址,不要提交本機的網址。**
+3. 暫時改 `js/config.js`:`apiBase` 改成 `http://localhost:5010/mama-fufood`、`googleClientId` 填網頁應用程式的用戶端 ID;再在 `index.html` 與 `admin.html` 的內容安全政策 `connect-src` 加上 `http://localhost:5010`(不加的話,瀏覽器會擋下對本機後端的請求)。**試完把這三個檔案都改回來,不要提交本機的網址。**
 4. 重新整理首頁 → 右上角用 `FIRST_ADMIN_EMAIL` 的帳號登入 → 出現「管理後台」。
 
 按 `Control + C` 停止網頁伺服器。
@@ -183,7 +196,17 @@ There is no frontend framework or build step — the `.html`, `.css` and `.js` f
 
 ### The Frontend Lock Is a Convenience; Permissions Live in the Backend
 
-The home page only shows the admin-console entry point after an admin signs in, but that's a convenience, not a security measure: anyone can open `admin.html` directly (without a session the page sends you straight back to the home page; signing in happens only on the home page, and "Log out" also returns there). The real check is in the backend: every `/api/admin/*` request must carry an admin session, and the backend re-checks "is this email still an admin right now" each time; anyone who isn't an admin is rejected by every admin API. The backend's CORS also only allows this site's origin (plus `http://localhost:8003` for local preview) to call the admin APIs.
+The home page only shows the admin-console entry point after an admin signs in, but that's a convenience, not a security measure: anyone can open `admin.html` directly (without a session the page sends you straight back to the home page; signing in happens only on the home page, and "Log out" also returns there). The real check is in the backend: every `/api/admin/*` request must carry an admin session, and the backend re-checks "is this email still an admin right now" each time; anyone who isn't an admin is rejected by every admin API. The backend's CORS also only allows this site's origin to call the admin APIs (for local preview, the local backend additionally allows `http://localhost:8003`).
+
+### Content Security Policy: Only Our Own Scripts Run
+
+All three pages carry a Content Security Policy in their `<head>`: if a script ever got injected into a page (for example, through data shown without escaping), the browser would refuse to run it.
+
+- Scripts run only from this site's own files, plus the Google sign-in library (`https://accounts.google.com/gsi/client`) on the home page; inline scripts in the HTML and event attributes such as `onclick` never run. That's why `legal.html`'s code lives in `js/legal.js` and `js/home.js` loads the Google sign-in library.
+- Connections are allowed only to this site, the backend, and Google sign-in on the home page. **When the backend's host changes (`apiBase` in `js/config.js`), update `connect-src` in `index.html` and `admin.html` too**, or the browser blocks requests to the new host. `python3 demo/tools/build.py` checks that the two match and fails if they don't.
+- Inline styles are allowed (`'unsafe-inline'`): the admin console uses many `style="…"` attributes, and inline styles can't run code.
+- GitHub Pages can't set custom response headers, so the policy is in a `<meta>` tag; `frame-ancestors` (stopping other sites from embedding the pages in an iframe) only works as a header, so it isn't set.
+- The demo (`demo/`, `demo-en/`) uses the same policy; its own scripts are files too (generated by `demo/tools/build.py`).
 
 ### Sign-In: The Google Credential Is Used Once
 
@@ -192,6 +215,8 @@ Google ID tokens expire after roughly an hour, so they can't be used as a long-l
 - When an admin signs in, the page sends the Google credential to the backend, which verifies it and issues a session token of our own; every later request carries that token (`js/api.js`).
 - The session token is stored in this browser's `localStorage`, with sliding expiry: it only expires after 90 consecutive days without use. When the backend answers 401 it is cleared so the user signs in again.
 - Google sign-in on the home page also only sends the credential to the backend to check whether this is an admin, and then discards it (stated in section 2 of the privacy policy).
+- The System tab has "登出所有裝置" (sign out everywhere): it ends this account's admin sessions in every browser at once, including this one. Use it if you suspect a sign-in has leaked.
+- The System tab also lists recent activity: which admin did what and when (the backend keeps it for 365 days and records no IP addresses).
 
 ### Terms and Policies Are Markdown, Identical to the App's Built-In Copy
 
@@ -201,7 +226,7 @@ They are rendered by a tiny hand-written Markdown converter (`js/md.js`) that on
 
 ### A Slow Response Must Not Overwrite a Newer Screen
 
-All admin-console data is loaded asynchronously. If you switch tabs or press refresh while a request is still in flight, the late, stale response could redraw the whole new screen (for example, wiping options you just ticked). `js/admin.js` keeps a generation counter (`gen`) each for "public data", "feedback list" and "feedback detail": it increments on every request, and a response whose generation is no longer the latest is simply dropped.
+All admin-console data is loaded asynchronously. If you switch tabs or press refresh while a request is still in flight, the late, stale response could redraw the whole new screen (for example, wiping options you just ticked). `js/admin.js` keeps a generation counter (`gen`) each for "public data", "feedback list", "feedback detail" and "system": it increments on every request, and a response whose generation is no longer the latest is simply dropped.
 
 ### When the Backend Is Asleep
 
@@ -220,6 +245,7 @@ js/
   ├── config.js          site settings: backend URL, Google client ID, Google Play URL
   ├── api.js             backend calls, keeps the admin session
   ├── md.js              tiny Markdown converter (escapes HTML first)
+  ├── legal.js           shows the document legal.html's ?doc= asks for
   ├── home.js            Google sign-in and the admin entry point on the home page
   └── admin.js           the admin console's five tabs
 legal/                  terms, policy, judgement-logic guide, data-use principles, policy version (identical to the app's built-in copy)
@@ -232,7 +258,7 @@ favicon.png, apple-touch-icon.png, icon_256.png   icons
 - **Not deployed yet**; the Google client ID and Google Play URL in `js/config.js` are still empty.
 - No automated tests — after a change, click through it yourself in a browser.
 - The admin console only works while the backend is awake; right after the backend wakes, the first action may take close to a minute.
-- Previewing the admin console locally means temporarily pointing `js/config.js` at the local backend (see Setup Guide Part A) — **remember to change it back and never commit it**.
+- Previewing the admin console locally means temporarily pointing `js/config.js` at the local backend and adding it to `connect-src` in `index.html` and `admin.html` (see Setup Guide Part A) — **remember to change them back and never commit them**.
 
 ---
 
@@ -249,13 +275,13 @@ python3 -m http.server 8003
 
 Open `http://localhost:8003` in your browser. The home page, terms and policies need no backend and show up right away.
 
-Don't change `8003` casually: Google sign-in matches the "Authorized JavaScript origins" including the port, and so does the backend's `ALLOWED_ORIGINS`.
+Don't change `8003` casually: Google sign-in matches the "Authorized JavaScript origins" including the port, and so does the local backend's `MAMA_FUFOOD__ALLOWED_ORIGINS`.
 
 ### 2. (To Try the Admin Console) Connect a Local Backend
 
-1. Run the backend at `http://localhost:5003` per `mama-fufood-backend`'s README, with `GOOGLE_CLIENT_ID`, `FIRST_ADMIN_EMAIL` and `SESSION_SECRET` filled in `.env`, and `ALLOWED_ORIGINS` including `http://localhost:8003` (the template already does).
+1. Run the backend per the "本機" (local) section of router-backend's README: it listens on `http://localhost:5010`, with mama-fufood under `/mama-fufood`. In `router-backend/.env`, fill in `MAMA_FUFOOD__DATABASE_URL` (a local database), `MAMA_FUFOOD__GOOGLE_CLIENT_ID`, `MAMA_FUFOOD__FIRST_ADMIN_EMAIL` and `MAMA_FUFOOD__SESSION_SECRET`, and set `MAMA_FUFOOD__ALLOWED_ORIGINS` to `http://localhost:8003`.
 2. In Google Cloud, the "Web application" client's "Authorized JavaScript origins" must include `http://localhost:8003`.
-3. Temporarily edit `js/config.js`: set `apiBase` to `http://localhost:5003` and `googleClientId` to the web application client ID. **When you're done, change `apiBase` back to the production URL — never commit the local URL.**
+3. Temporarily edit `js/config.js`: set `apiBase` to `http://localhost:5010/mama-fufood` and `googleClientId` to the web application client ID; then add `http://localhost:5010` to `connect-src` in the Content Security Policy of `index.html` and `admin.html` (without it, the browser blocks requests to the local backend). **When you're done, change all three files back — never commit the local URL.**
 4. Refresh the home page → sign in at the top right with the `FIRST_ADMIN_EMAIL` account → "管理後台" (Admin console) appears.
 
 Press `Control + C` to stop the web server.

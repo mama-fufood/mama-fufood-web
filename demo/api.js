@@ -106,6 +106,7 @@
       if (route === "/api/admin/formats") return { formats: catalog.formats };
       if (route === "/api/admin/admins") return { admins: fx.admins };
       if (route === "/api/admin/feedback") return feedbackList(query);
+      if (route === "/api/admin/audit") return { items: fx.audit || [], retention_days: 365 };
       const m = route.match(/^\/api\/admin\/feedback\/(.+)$/);
       if (m) {
         const f = fx.feedback.find((x) => x.id === m[1]);

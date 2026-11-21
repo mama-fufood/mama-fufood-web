@@ -2,6 +2,8 @@
 <html lang="zh-Hant-TW">
 <head>
   <meta charset="utf-8">
+  <!-- 內容安全政策:只執行這個網站自己的 script 與 Google 登入元件,不執行 HTML 裡的行內 script。後端網址(js/config.js 的 apiBase)換了主機時,connect-src 要一起改 -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data:; connect-src 'self' https://router-backend-3hl2.onrender.com https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; object-src 'none'; base-uri 'self'; form-action 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>媽媽記副食品</title>
   <meta name="description" content="記錄寶寶副食品的 App：吃了什麼、吃多少、有沒有過敏狀況。紀錄只存在你的手機與你自己的 Google 雲端硬碟。">
@@ -61,7 +63,5 @@
   <script src="js/api.js"></script>
   <script src="js/md.js"></script>
   <script src="js/home.js"></script>
-  <script src="https://accounts.google.com/gsi/client" async defer onload="window.mffHomeGsiReady && window.mffHomeGsiReady()"
-    onerror="document.getElementById('login-note').textContent = '無法載入 Google 登入元件（不影響瀏覽網站）。'"></script>
 </body>
 </html>

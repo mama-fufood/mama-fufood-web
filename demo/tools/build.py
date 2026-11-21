@@ -5,16 +5,21 @@
 
 正式版的檔案一個都不改;示範版需要的轉接全部在這裡做:
 - index.html:從正式版的 index.html 改路徑,把 js/config.js、js/api.js 換成示範版自己的,
-  最前面加一段替 localStorage 的 key 加前綴的 script(跟正式版同一個網域,不能互相讀到)。
+  最前面載入 storage-prefix.js,替 localStorage 的 key 加前綴(跟正式版同一個網域,不能互相讀到)。
+- 示範版自己加的 script 一律放成檔案(storage-prefix.js、guest.js),不寫在 HTML 裡:
+  正式版的內容安全政策(Content-Security-Policy)會原樣複製過來,它不允許行內 script。
 - config.js:從正式版的 js/config.js 複製,後端網址清空(萬一載入了真的 api.js,請求也只會打到 github.io)。
-- 首頁多一個「不用 Google 帳號直接進入」的按鈕;登入後的「管理後台」連到示範版自己的 admin.html。
+- 首頁多一個「不用 Google 帳號直接進入」的按鈕(guest.js);登入後的「管理後台」連到示範版自己的 admin.html。
 - admin.html:從正式版的 admin.html 改路徑,同樣換成示範版的 config.js 與 api.js(假後台)。
 - data.js:App 內建的公用資料(食材清單、單位)與後端的匯出格式定義,給假後台當「目前的資料」。
 - 中文版的條款、政策、判斷邏輯說明:原樣複製正式版的 legal/*.md(首頁用相對路徑讀)。
-- 英文版:照 translations.py 的對照表把 index.html、admin.html、js/home.js、js/admin.js 與公用資料換成英文;
+- 英文版:照 translations.py 的對照表把 index.html、admin.html、js/home.js、js/admin.js 與公用資料換成英文
+  (Google 登入元件的網址也在 home.js 裡,英文版加上 ?hl=en);
   api.js 從 demo/ 複製;fixtures.js(假的意見回饋等)是手寫的;
   條款、政策、判斷邏輯說明是手寫的翻譯(demo-en/legal/),中文原文改了就報錯。
 - 英文版產出的檔案(註解以外)不能留有中文字,只有營運者名稱例外。
+- 順便檢查正式版:js/config.js 的後端主機一定要在 index.html、admin.html 的內容安全政策 connect-src 裡
+  (只改了一邊,瀏覽器會默默擋下對後端的請求,畫面只說「連不上後端」)。
 
 只用標準函式庫,用系統的 python3 就能跑。
 """
@@ -45,19 +50,21 @@ def html_mark(source: str) -> str:
     return f"<!-- 由 demo/tools/build.py 從正式版的 {source} 產生，不要手改。 -->\n"
 
 
-GUEST = (
-    "  <script>\n"
-    "    // 示範版:不用 Google 帳號也能進後台。登入後(出現「管理後台」入口)就藏起來。\n"
-    "    (function () {\n"
-    "      var b = document.getElementById(\"demo-guest\");\n"
-    "      var admin = document.getElementById(\"admin-link\");\n"
-    "      function sync() { b.hidden = !!window.mffApi.token() && !admin.hidden; }\n"
-    "      b.hidden = !!window.mffApi.token();\n"
-    "      new MutationObserver(sync).observe(admin, { attributes: true });\n"
-    "      b.onclick = function () { window.mffApi.setToken(\"demo\"); location.reload(); };\n"
-    "    })();\n"
-    "  </script>\n"
-)
+GUEST_TAG = '  <script src="guest.js"></script>\n'
+
+
+def guest_js() -> str:
+    return js_mark("demo/tools/build.py") + (
+        "// 示範版:不用 Google 帳號也能進後台。登入後(出現「管理後台」入口)就藏起來。\n"
+        "(function () {\n"
+        "  var b = document.getElementById(\"demo-guest\");\n"
+        "  var admin = document.getElementById(\"admin-link\");\n"
+        "  function sync() { b.hidden = !!window.mffApi.token() && !admin.hidden; }\n"
+        "  b.hidden = !!window.mffApi.token();\n"
+        "  new MutationObserver(sync).observe(admin, { attributes: true });\n"
+        "  b.onclick = function () { window.mffApi.setToken(\"demo\"); location.reload(); };\n"
+        "})();\n"
+    )
 
 LATIN_FONT = '  <style>body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }</style>\n</head>'
 
@@ -85,28 +92,32 @@ def translate(text: str, pairs: list[tuple[str, str]], where: str) -> str:
     return text
 
 
-def storage_shim(prefix: str) -> str:
-    return (
-        "  <meta name=\"robots\" content=\"noindex\">\n"
-        "  <script>\n"
-        "    // 示範版跟正式版同一個網域,localStorage 是共用的:這一頁所有的 key 加上前綴,\n"
-        "    // 讀不到正式版的管理員 session,也不會寫進正式版的資料。一定要在其他 script 之前執行。\n"
-        "    (function () {\n"
-        f"      var PREFIX = \"{prefix}\";\n"
-        "      var S = Storage.prototype;\n"
-        "      var getItem = S.getItem, setItem = S.setItem, removeItem = S.removeItem;\n"
-        "      S.getItem = function (k) { return getItem.call(this, PREFIX + k); };\n"
-        "      S.setItem = function (k, v) { return setItem.call(this, PREFIX + k, v); };\n"
-        "      S.removeItem = function (k) { return removeItem.call(this, PREFIX + k); };\n"
-        "    })();\n"
-        "  </script>\n"
+SHIM_TAG = '  <meta name="robots" content="noindex">\n  <script src="storage-prefix.js"></script>\n'
+
+
+def storage_prefix_js(prefix: str) -> str:
+    return js_mark("demo/tools/build.py") + (
+        "// 示範版跟正式版同一個網域,localStorage 是共用的:這一頁所有的 key 加上前綴,\n"
+        "// 讀不到正式版的管理員 session,也不會寫進正式版的資料。一定要在其他 script 之前載入。\n"
+        "(function () {\n"
+        f"  var PREFIX = \"{prefix}\";\n"
+        "  var S = Storage.prototype;\n"
+        "  var getItem = S.getItem, setItem = S.setItem, removeItem = S.removeItem;\n"
+        "  S.getItem = function (k) { return getItem.call(this, PREFIX + k); };\n"
+        "  S.setItem = function (k, v) { return setItem.call(this, PREFIX + k, v); };\n"
+        "  S.removeItem = function (k) { return removeItem.call(this, PREFIX + k); };\n"
+        "})();\n"
     )
+
+
+VIEWPORT = '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
 
 
 def common_page(src: str, source: str, lang: str, where: str) -> str:
     """index.html 與 admin.html 共用的轉接:產生標記、localStorage 前綴、相對路徑、示範版的 script。"""
     t = replace_once(src, "<!doctype html>\n", "<!doctype html>\n" + html_mark(source), where)
-    t = replace_once(t, '<meta charset="utf-8">\n', '<meta charset="utf-8">\n' + storage_shim("demo-en:" if lang == "en" else "demo:"), where)
+    # 放在內容安全政策與 viewport 之後、其他 script 之前。
+    t = replace_once(t, VIEWPORT, VIEWPORT + SHIM_TAG, where)
     for old, new in [
         ('href="favicon.png"', 'href="../favicon.png"'),
         ('href="css/style.css"', 'href="../css/style.css"'),
@@ -128,13 +139,12 @@ def build_index(lang: str) -> str:
         ('href="apple-touch-icon.png"', 'href="../apple-touch-icon.png"'),
         ('src="icon_256.png"', 'src="../icon_256.png"'),
         ('src="js/md.js"', 'src="../js/md.js"'),
-        ('src="js/home.js"></script>\n', ('src="home.js"></script>\n' if lang == "en" else 'src="../js/home.js"></script>\n') + GUEST),
+        ('src="js/home.js"></script>\n', ('src="home.js"></script>\n' if lang == "en" else 'src="../js/home.js"></script>\n') + GUEST_TAG),
         ('<div id="gsi"></div>\n', '<div id="gsi"></div>\n    <button id="demo-guest" type="button" hidden>不用 Google 帳號直接進入</button>\n'),
     ]:
         t = replace_once(t, old, new, where)
     if lang == "en":
         t = translate(t, translations.INDEX, where)
-        t = replace_once(t, 'src="https://accounts.google.com/gsi/client"', 'src="https://accounts.google.com/gsi/client?hl=en"', where)
     return t
 
 
@@ -197,6 +207,8 @@ def outputs() -> dict[Path, str]:
     out[DEMO / "admin.html"] = build_admin("zh")
     out[DEMO / "data.js"] = build_data("zh")
     out[DEMO / "config.js"] = build_config()
+    out[DEMO / "storage-prefix.js"] = storage_prefix_js("demo:")
+    out[DEMO / "guest.js"] = guest_js()
     for doc in DOCS:
         out[DEMO / "legal" / f"{doc}.md"] = (WEB / "legal" / f"{doc}.md").read_text(encoding="utf-8")
 
@@ -204,12 +216,40 @@ def outputs() -> dict[Path, str]:
     out[DEMO_EN / "admin.html"] = build_admin("en")
     out[DEMO_EN / "data.js"] = build_data("en")
     out[DEMO_EN / "config.js"] = build_config()
+    out[DEMO_EN / "storage-prefix.js"] = storage_prefix_js("demo-en:")
+    out[DEMO_EN / "guest.js"] = guest_js()
     out[DEMO_EN / "api.js"] = js_mark("demo/api.js") + (DEMO / "api.js").read_text(encoding="utf-8")
     home = (WEB / "js" / "home.js").read_text(encoding="utf-8")
     out[DEMO_EN / "home.js"] = js_mark("js/home.js") + translate(home, translations.HOME, "demo-en/home.js")
     admin = (WEB / "js" / "admin.js").read_text(encoding="utf-8")
     out[DEMO_EN / "admin.js"] = js_mark("js/admin.js") + translate(admin, translations.ADMIN, "demo-en/admin.js")
     return out
+
+
+def csp_backend_problems() -> list[str]:
+    """正式版 js/config.js 的後端主機,有沒有寫進 index.html 與 admin.html 的 connect-src。"""
+    cfg = (WEB / "js" / "config.js").read_text(encoding="utf-8")
+    m = re.search(r'apiBase: "([^"]*)"', cfg)
+    if not m or not m.group(1):
+        return []  # 沒設後端網址,就沒有要對照的
+    origin = re.match(r"https?://[^/]+", m.group(1))
+    if not origin:
+        return [f"js/config.js:apiBase 不是 http(s) 網址:{m.group(1)}"]
+    problems = []
+    for page in ("index.html", "admin.html"):
+        html = (WEB / page).read_text(encoding="utf-8")
+        csp = re.search(r'http-equiv="Content-Security-Policy" content="([^"]*)"', html)
+        if not csp:
+            problems.append(f"{page}:找不到內容安全政策(Content-Security-Policy)")
+            continue
+        directives = {}
+        for part in csp.group(1).split(";"):
+            words = part.split()
+            if words:
+                directives[words[0]] = words[1:]
+        if origin.group(0) not in directives.get("connect-src", []):
+            problems.append(f"{page}:內容安全政策的 connect-src 沒有後端主機 {origin.group(0)}(js/config.js 的 apiBase)")
+    return problems
 
 
 def strip_comments(path: Path, text: str) -> str:
@@ -264,6 +304,12 @@ def check_english(out: dict[Path, str]) -> list[str]:
 
 def main() -> int:
     check_only = "--check" in sys.argv[1:]
+    csp = csp_backend_problems()
+    if csp:
+        print("正式版的設定不一致:")
+        for p in csp:
+            print("  " + p)
+        return 1
     try:
         out = outputs()
     except BuildError as e:

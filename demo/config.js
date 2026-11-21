@@ -3,6 +3,8 @@
 // README 上線 SOP 的 Part F 填好再推上 GitHub Pages。
 window.MFF_CONFIG = {
   // 後端網址(Render 上的 router-backend 加上 /mama-fufood),不要結尾斜線。
+  // 換了主機時,index.html 與 admin.html 的內容安全政策(Content-Security-Policy 的 connect-src)要一起改,
+  // 不然瀏覽器會擋下對新主機的請求。
   apiBase: "",
   // Google Cloud 的「網頁應用程式」用戶端 ID(和後端的 GOOGLE_CLIENT_ID 是同一個)。
   googleClientId: "316171912832-3ujfsr17r549hpu000hpnb09as7u5u5c.apps.googleusercontent.com",

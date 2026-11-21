@@ -1,8 +1,10 @@
 // 很小的 Markdown 轉換器,只處理 legal/*.md 用到的語法:標題、段落、清單、粗體、連結、表格、引言、分隔線。
 // 不用第三方函式庫;內容來自我們自己的 legal/*.md,仍然先跳脫 HTML。
+// 引號也要跳脫:連結網址會放進 href="…",網址裡的 " 不跳脫就能跳出屬性、加上別的屬性。
 (function () {
   function esc(s) {
-    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
   function inline(s) {
     let t = esc(s);

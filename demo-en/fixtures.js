@@ -20,6 +20,12 @@ window.MFF_DEMO_FIXTURES = {
     { email: "admin@example.com", note: "First admin (environment variable)", created_at: null, created_by: "", fixed: true },
     { email: "helper@example.com", note: "Helps maintain the food list", created_at: "2026-10-25T02:00:00+00:00", created_by: "admin@example.com", fixed: false },
   ],
+  audit: [
+    { at: "2026-11-02T01:10:00+00:00", email: "admin@example.com", action: "publish", detail: { dataset: "food_list", version: "20261024112425" } },
+    { at: "2026-11-02T01:08:00+00:00", email: "admin@example.com", action: "food_update", detail: { id: 12, disabled: true } },
+    { at: "2026-11-02T01:05:00+00:00", email: "admin@example.com", action: "login", detail: {} },
+    { at: "2026-10-25T02:00:00+00:00", email: "admin@example.com", action: "admin_add", detail: { email: "helper@example.com" } },
+  ],
   feedback: [
     {
       id: "6f1c2a4e-8b1d-4c3e-9a57-2d9e0b6f4a11",

@@ -78,7 +78,7 @@
     }
   }
 
-  window.mffHomeGsiReady = function () {
+  function gsiReady() {
     if (!cfg.googleClientId || !window.google) {
       $("login-note").textContent = "";
       return;
@@ -87,7 +87,19 @@
     // 深色模式用深色的按鈕;用預設的 outline 會在深色頁面上變成一個白色的圓框。
     const dark = matchMedia("(prefers-color-scheme: dark)").matches;
     google.accounts.id.renderButton($("gsi"), { locale: "en", type: "icon", shape: "circle", theme: dark ? "filled_black" : "outline", size: "large" });
-  };
+  }
+
+  // Google 登入元件由這裡載入,不在 HTML 裡用 onload、onerror 屬性:
+  // index.html 的內容安全政策不允許行內的 script(包括這類事件屬性)。
+  function loadGsi() {
+    const s = document.createElement("script");
+    s.src = "https://accounts.google.com/gsi/client?hl=en";
+    s.async = true;
+    s.onload = gsiReady;
+    s.onerror = () => { $("login-note").textContent = "Could not load Google Sign-In (the rest of the site still works)."; };
+    document.head.appendChild(s);
+  }
 
   if (api.token()) showAdmin();
+  loadGsi();
 })();

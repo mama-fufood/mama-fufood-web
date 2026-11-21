@@ -2,6 +2,8 @@
 <html lang="zh-Hant-TW">
 <head>
   <meta charset="utf-8">
+  <!-- 內容安全政策:只執行這個網站自己的 script,不執行 HTML 裡的行內 script。後端網址(js/config.js 的 apiBase)換了主機時,connect-src 要一起改 -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://router-backend-3hl2.onrender.com; object-src 'none'; base-uri 'self'; form-action 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <title>管理後台 - 媽媽記副食品</title>

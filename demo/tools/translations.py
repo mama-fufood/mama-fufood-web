@@ -58,10 +58,6 @@ INDEX = [
     ('font-size: 17px">下載</h2>', 'font-size: 17px">Download</h2>'),
     (">下載最新版媽媽記副食品</a>", ">Download the latest mama-fufood</a>"),
     ("目前尚未在 Google Play 上架。", "Not yet available on Google Play."),
-    (
-        "無法載入 Google 登入元件（不影響瀏覽網站）。",
-        "Could not load Google Sign-In (the rest of the site still works).",
-    ),
 ]
 
 HOME = [
@@ -83,6 +79,11 @@ HOME = [
         "Signed in. This account isn't an administrator, so there's nothing more to do on this site.",
     ),
     ('{ type: "icon",', '{ locale: "en", type: "icon",'),
+    ('"https://accounts.google.com/gsi/client"', '"https://accounts.google.com/gsi/client?hl=en"'),
+    (
+        "無法載入 Google 登入元件（不影響瀏覽網站）。",
+        "Could not load Google Sign-In (the rest of the site still works).",
+    ),
 ]
 
 # demo-en/legal/ 的英文是手寫的翻譯。這裡記著翻譯時中文原文(legal/*.md)的 SHA-256:
@@ -235,6 +236,33 @@ ADMIN = [
         "Version ${x.format_version} (${esc(x.status)}, minimum App ${esc(x.min_app_version)})",
     ),
     ('"已重新載入"', '"Reloaded"'),
+    # 系統:登入狀態與操作紀錄
+    ('login: "登入", logout_all: "登出所有裝置"', 'login: "Signed in", logout_all: "Signed out everywhere"'),
+    ('group_create: "新增分組", group_update: "修改分組", group_delete: "刪除分組"',
+     'group_create: "Group added", group_update: "Group changed", group_delete: "Group deleted"'),
+    ('food_create: "新增食材", food_update: "修改食材", food_delete: "刪除食材"',
+     'food_create: "Food added", food_update: "Food changed", food_delete: "Food deleted"'),
+    ('unit_create: "新增單位", unit_update: "修改單位", unit_delete: "刪除單位"',
+     'unit_create: "Unit added", unit_update: "Unit changed", unit_delete: "Unit deleted"'),
+    ('publish: "發布公用資料", cache_reload: "重新載入快取", app_config_update: "修改 App 版本設定"',
+     'publish: "Shared data published", cache_reload: "Cache reloaded", app_config_update: "App version settings changed"'),
+    # feedback_delete_by_email 的「個資刪除請求」已經由上面意見回饋那一段換成英文。
+    ('feedback_update: "更新意見回饋", feedback_delete: "刪除意見回饋"',
+     'feedback_update: "Feedback updated", feedback_delete: "Feedback deleted"'),
+    ('admin_add: "新增管理員", admin_remove: "移除管理員"', 'admin_add: "Admin added", admin_remove: "Admin removed"'),
+    ('<h3 style="margin-top:0">登入狀態</h3>', '<h3 style="margin-top:0">Sign-in sessions</h3>'),
+    (
+        "懷疑後台的登入狀態外流（例如在別人的電腦登入過）時，可以登出這個帳號在所有瀏覽器上的後台，包含這一台。",
+        "If you suspect an admin sign-in has leaked (for example, you signed in on someone else's computer), sign this account out of the admin console in every browser, including this one.",
+    ),
+    (">登出所有裝置</button>", ">Sign out everywhere</button>"),
+    ('<h3 style="margin-top:0">操作紀錄</h3>', '<h3 style="margin-top:0">Activity log</h3>'),
+    ("最近 ${esc(a.items.length)} 筆，保留 ${esc(a.retention_days)} 天；不記 IP。",
+     "Latest ${esc(a.items.length)} entries, kept for ${esc(a.retention_days)} days; no IP addresses are recorded."),
+    ("<th>時間</th><th>管理員</th><th>動作</th><th>內容</th>", "<th>Time</th><th>Admin</th><th>Action</th><th>Details</th>"),
+    ("還沒有紀錄。", "No entries yet."),
+    ("確定登出這個帳號在所有瀏覽器上的後台？這一台也會登出。",
+     "Sign this account out of the admin console in every browser? This browser will be signed out too."),
 ]
 
 # 英文示範版的公用資料:分組、食材、單位的名稱(ID 對應)。正式資料新增了項目,這裡沒有就報錯。

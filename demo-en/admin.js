@@ -21,7 +21,7 @@
   let foodGroup = null;
   // 每次載入都拿一個序號;慢的舊回應回來時,序號已經不是最新的就丟掉,不蓋掉新的畫面
   // (快速連按篩選或連續編輯時,舊的回應可能比新的晚到)。
-  const gen = { data: 0, feedback: 0, detail: 0 };
+  const gen = { data: 0, feedback: 0, detail: 0, system: 0 };
   let feedbackFilters = { kind: "", status: "", app_version: "", device_model: "", page: 1 };
 
   function message(text, kind) {
@@ -353,10 +353,39 @@
   }
 
   // ── 系統 ────────────────────────────────────────────────
+  // 操作紀錄的動作代碼(後端 audit.py 的 ACTIONS),新增時兩邊一起加;不認得的代碼原樣顯示。
+  const AUDIT_ACTIONS = {
+    login: "Signed in", logout_all: "Signed out everywhere",
+    group_create: "Group added", group_update: "Group changed", group_delete: "Group deleted",
+    food_create: "Food added", food_update: "Food changed", food_delete: "Food deleted",
+    unit_create: "Unit added", unit_update: "Unit changed", unit_delete: "Unit deleted",
+    publish: "Shared data published", cache_reload: "Cache reloaded", app_config_update: "App version settings changed",
+    feedback_update: "Feedback updated", feedback_delete: "Feedback deleted", feedback_delete_by_email: "Personal data deletion request",
+    admin_add: "Admin added", admin_remove: "Admin removed",
+  };
+  const auditDetail = (d) => Object.entries(d || {})
+    .map(([k, v]) => `${k}=${typeof v === "string" ? v : JSON.stringify(v)}`).join(", ");
+
+  function auditCards(a) {
+    const rows = a.items.map((i) => `<tr><td>${esc(fmtTime(i.at))}</td><td>${esc(i.email)}</td>
+      <td>${esc(AUDIT_ACTIONS[i.action] || i.action)}</td><td>${esc(auditDetail(i.detail))}</td></tr>`).join("");
+    return `<div class="card"><h3 style="margin-top:0">Sign-in sessions</h3>
+        <p class="muted">If you suspect an admin sign-in has leaked (for example, you signed in on someone else's computer), sign this account out of the admin console in every browser, including this one.</p>
+        <button id="logout-all" class="danger">Sign out everywhere</button>
+      </div>
+      <div class="card"><h3 style="margin-top:0">Activity log</h3>
+        <p class="muted">Latest ${esc(a.items.length)} entries, kept for ${esc(a.retention_days)} days; no IP addresses are recorded.</p>
+        ${a.items.length ? `<div class="scroll-x"><table><thead><tr><th>Time</th><th>Admin</th><th>Action</th><th>Details</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="muted">No entries yet.</p>'}
+      </div>`;
+  }
+
   async function loadSystem() {
+    const mine = ++gen.system;
     await run(async () => {
       const o = await api.call("GET", "/api/admin/overview");
       const f = await api.call("GET", "/api/admin/formats");
+      const a = await api.call("GET", "/api/admin/audit");
+      if (mine !== gen.system) return;
       const cache = o.cache.loaded ? Object.entries(o.cache.datasets).map(([k, v]) => `${k}=${v}`).join(", ") : "not loaded yet";
       const db = Object.entries(o.releases).map(([k, v]) => `${k}=${v.version}`).join(", ");
       $("tab-system").innerHTML = `<div class="card">
@@ -369,8 +398,17 @@
       <div class="card"><h3 style="margin-top:0">Export format definitions (released with the backend code; read-only)</h3>
         ${f.formats.map((x) => `<details><summary>Version ${x.format_version} (${esc(x.status)}, minimum App ${esc(x.min_app_version)})</summary>
           <pre class="log">${esc(JSON.stringify(x.definition, null, 1))}</pre></details>`).join("")}
-      </div>`;
+      </div>
+      ${auditCards(a)}`;
       $("reload-cache").onclick = () => run(async () => { await api.call("POST", "/api/admin/cache/reload"); await loadSystem(); }, "Reloaded");
+      $("logout-all").onclick = () => {
+        if (!confirm("Sign this account out of the admin console in every browser? This browser will be signed out too.")) return;
+        run(async () => {
+          await api.call("POST", "/api/admin/logout-all");
+          api.setToken(null);
+          showLogin();
+        });
+      };
     });
   }
 

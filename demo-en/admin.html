@@ -3,20 +3,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="robots" content="noindex">
-  <script>
-    // 示範版跟正式版同一個網域,localStorage 是共用的:這一頁所有的 key 加上前綴,
-    // 讀不到正式版的管理員 session,也不會寫進正式版的資料。一定要在其他 script 之前執行。
-    (function () {
-      var PREFIX = "demo-en:";
-      var S = Storage.prototype;
-      var getItem = S.getItem, setItem = S.setItem, removeItem = S.removeItem;
-      S.getItem = function (k) { return getItem.call(this, PREFIX + k); };
-      S.setItem = function (k, v) { return setItem.call(this, PREFIX + k, v); };
-      S.removeItem = function (k) { return removeItem.call(this, PREFIX + k); };
-    })();
-  </script>
+  <!-- 內容安全政策:只執行這個網站自己的 script,不執行 HTML 裡的行內 script。後端網址(js/config.js 的 apiBase)換了主機時,connect-src 要一起改 -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://router-backend-3hl2.onrender.com; object-src 'none'; base-uri 'self'; form-action 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <script src="storage-prefix.js"></script>
   <meta name="robots" content="noindex">
   <title>Admin console - mama-fufood</title>
   <link rel="icon" type="image/png" href="../favicon.png">
