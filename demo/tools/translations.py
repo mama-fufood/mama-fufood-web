@@ -89,8 +89,8 @@ HOME = [
 # demo-en/legal/ 的英文是手寫的翻譯。這裡記著翻譯時中文原文(legal/*.md)的 SHA-256:
 # 中文改了,build.py 會報錯,重翻對應的英文檔之後再更新這裡的值(build.py 會印出新的值)。
 LEGAL_SOURCES = {
-    "terms": "bd1f4e9d23fb9a63cd6c8465b00f508c5926c59b4b9c1add3d82078c8fc715b4",
-    "privacy": "510f33a4f341ee21bbb64676ace26577f31e4b97d899bcd8dfb26b044140d483",
+    "terms": "acbfa5766c2aba9c49391f512a0e8d0d7015d7acf58c4c5e5c069b9be1d01e6b",
+    "privacy": "9e3c295f1ee6d6cb7e6b0a26f80f25e82831a5953e58966c28478947197db886",
     "judgement_guide": "7eb25c886f40af23f12e51cd046c9ed442fe41a8829893c4645052e843b21f6e",
 }
 

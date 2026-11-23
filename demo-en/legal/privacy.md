@@ -98,4 +98,4 @@ We may change this Policy. After a change, the first time you open the App you w
 
 阿舍老師
 Email: tutorarthurouat@outlook.com
-Website: <https://beethoreven.github.io/mama-fufood-web/>
+Website: <https://mama-fufood.github.io/mama-fufood-web/>

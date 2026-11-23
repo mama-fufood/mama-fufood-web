@@ -1,7 +1,7 @@
 # 示範版（demo/ 與 demo-en/）
 
-- 中文：https://beethoreven.github.io/mama-fufood-web/demo/
-- 英文：https://beethoreven.github.io/mama-fufood-web/demo-en/
+- 中文：https://mama-fufood.github.io/mama-fufood-web/demo/
+- 英文：https://mama-fufood.github.io/mama-fufood-web/demo-en/
 
 網站首頁與管理後台的示範版。畫面和正式版一樣（直接載入正式版的 `../css/`、`../js/md.js`，中文版也直接用 `../js/home.js`、`../js/admin.js`），但**一個請求都不送到後端**：
 

@@ -138,7 +138,7 @@ python3 -m http.server 8003
 1. repo 的 **Settings → Pages**。
 2. **Build and deployment → Source** 選 **Deploy from a branch**。
 3. **Branch** 選 `main`、資料夾選 `/ (root)` → **Save**。
-4. 一兩分鐘後打開 `https://beethoreven.github.io/mama-fufood-web/` 看得到首頁。之後每次推上 `main`,Pages 會自動更新。
+4. 一兩分鐘後打開 `https://mama-fufood.github.io/mama-fufood-web/` 看得到首頁。之後每次推上 `main`,Pages 會自動更新。
 
 GitHub 免費方案的 Pages 只能用在**公開**的 repo。
 
@@ -295,7 +295,7 @@ Going live means filling URLs and client IDs back and forth between the backend,
 1. The repo's **Settings → Pages**.
 2. Under **Build and deployment → Source**, choose **Deploy from a branch**.
 3. Choose branch `main` and folder `/ (root)` → **Save**.
-4. A minute or two later, `https://beethoreven.github.io/mama-fufood-web/` shows the home page. Every push to `main` updates Pages automatically afterwards.
+4. A minute or two later, `https://mama-fufood.github.io/mama-fufood-web/` shows the home page. Every push to `main` updates Pages automatically afterwards.
 
 On GitHub's free plan, Pages only works for **public** repos.
 
