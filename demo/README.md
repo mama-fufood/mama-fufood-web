@@ -14,25 +14,27 @@
 ## 不能影響正式版
 
 - **正式版的檔案一個都不改。** 示範版需要的轉接全部由 `demo/tools/build.py` 在示範版的資料夾裡產生。
-- 示範版和正式版同一個網域，localStorage 是共用的。示範版的 `index.html` 最前面替這一頁所有的 key 加上前綴（`demo:`、`demo-en:`），讀不到正式版的管理員 session。
+- 示範版和正式版同一個網域，localStorage 是共用的。示範版的 `index.html`、`admin.html` 最前面載入 `storage-prefix.js`，替這一頁所有的 key 加上前綴（`demo:`、`demo-en:`），讀不到正式版的管理員 session。
 - 示範版的 `config.js` 後端網址是空的：萬一載入了真的 `api.js`，請求也只會打到 github.io 自己。
 
 ## 檔案
 
 | 檔案 | 怎麼來的 |
 |---|---|
-| `demo/api.js` | 手寫：假的後端，回應格式和 `mama-fufood-backend/routes/admin.py` 一樣；寫入的動作只跳提示 |
+| `demo/api.js` | 手寫：假的後端，回應格式和 router-backend 的 `apps/mama_fufood/admin_routes.py` 一樣；寫入的動作只跳提示 |
 | `demo/fixtures.js`、`demo-en/fixtures.js` | 手寫：假的意見回饋、管理員、App 版本設定，以及假後端要顯示的文字（中英文各一份，要一起改） |
 | `demo/tools/build.py` | 手寫：產生下面所有「產生」的檔案；`--check` 只檢查是不是最新的 |
 | `demo/tools/translations.py` | 手寫：英文版的中英對照表與術語表 |
 | `demo-en/legal/*.md` | 手寫：條款、政策、判斷邏輯說明的英文翻譯（開頭註明以中文版為準） |
 | `demo/index.html`、`demo-en/index.html` | 產生：從正式版的 `index.html` 改路徑、換成示範版的 `config.js` 與 `api.js`、加上「不用 Google 帳號直接進入」；英文版另外換成英文、改用拉丁字型 |
 | `demo/admin.html`、`demo-en/admin.html` | 產生：從正式版的 `admin.html`，轉接方式同上 |
-| `demo/data.js`、`demo-en/data.js` | 產生：App 的 `assets/datasets/` 與後端的 `export_formats/`；英文版照對照表換成英文名稱 |
+| `demo/data.js`、`demo-en/data.js` | 產生：App 的 `assets/datasets/` 與 router-backend 的 `apps/mama_fufood/export_formats/`；英文版照對照表換成英文名稱 |
 | `demo/config.js`、`demo-en/config.js` | 產生：正式版的 `js/config.js`，後端網址清空 |
 | `demo/legal/*.md` | 產生：正式版 `legal/` 的原樣複製 |
 | `demo-en/home.js`、`demo-en/admin.js` | 產生：正式版的 `js/home.js`、`js/admin.js` 換成英文 |
 | `demo-en/api.js` | 產生：`demo/api.js` 的複製 |
+| `demo/storage-prefix.js`、`demo-en/storage-prefix.js` | 產生：替 localStorage 的 key 加前綴，一定要在其他 script 之前載入（正式版的內容安全政策不允許行內 script，所以放成檔案） |
+| `demo/guest.js`、`demo-en/guest.js` | 產生：「不用 Google 帳號直接進入」按鈕的程式 |
 
 ## 改了正式版之後
 
@@ -49,5 +51,6 @@ python3 demo/tools/build.py
 - 公用資料新增了分組、食材或單位，或多了新的匯出格式版本：在 `translations.py` 補上英文名稱或說明。
 - 正式版的後台多了新的 API：在 `demo/api.js` 補上對應的假回應（沒補的讀取會顯示「找不到這筆資料」）。
 - 正式版的 `legal/*.md` 改了：重翻 `demo-en/legal/` 對應的檔案，再照錯誤訊息更新 `translations.py` 的 `LEGAL_SOURCES`。
+- 正式版 `js/config.js` 的後端主機不在 `index.html`、`admin.html` 內容安全政策的 `connect-src` 裡：把兩邊改成一致。
 
 本機預覽：在 `mama-fufood-web` 執行 `python3 -m http.server 8003`，打開 http://localhost:8003/demo/ 與 http://localhost:8003/demo-en/ 。

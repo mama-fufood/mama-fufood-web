@@ -3,7 +3,7 @@
 // - 登入:Google 憑證只在瀏覽器裡解開、讀出 Email 拿來顯示,不送去任何地方;不管誰登入都是管理員,
 //   登入狀態存在這一頁自己的 localStorage(index.html 已替 key 加上前綴),重新整理後還在。
 // - 讀取:用 data.js(公用資料、匯出格式)與 fixtures.js(意見回饋、管理員、App 版本設定)回答,
-//   回應格式和後端 routes/admin.py 一樣。
+//   回應格式和後端(router-backend 的 apps/mama_fufood/admin_routes.py)一樣。
 // - 寫入(儲存、發布、新增、刪除):不改任何資料,跳出提示「示範版不會更新正式資料」。
 // 這支會被 demo/tools/build.py 原樣複製到 demo-en/,顯示給使用者看的文字都放在 fixtures.js。
 (function () {

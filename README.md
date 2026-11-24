@@ -22,7 +22,7 @@
 |---|---|
 | `index.html` | 首頁:App 的介紹、「你的資料只在你手上」的說明、下載(目前尚未上架)。上方的頁籤可以在同一頁切換到使用者條款、隱私權政策、判斷邏輯說明(網址會帶 `?doc=`,可以直接分享)。右上角可以用 Google 登入:一般使用者登入沒有作用;管理員登入後才出現「管理後台」的入口。 |
 | `legal.html?doc=terms` / `privacy` / `judgement_guide` | 使用者條款、隱私權政策、判斷邏輯說明的單獨頁面,內容和首頁頁籤是同一份。App 與 Google 同意畫面連的是這個網址,所以保留;隱私權政策的公開網址,將來上架時要填進 Google Play。 |
-| `admin.html` | 管理後台,五個分頁:公用資料(食材清單與單位的編輯、發布)、App 版本(強制更新門檻與提示文字)、意見回饋、管理員、系統(快取與資料庫的版本、重新載入快取)。 |
+| `admin.html` | 管理後台,五個分頁:公用資料(食材清單與單位的編輯、發布)、App 版本(強制更新門檻與提示文字)、意見回饋、管理員、系統(快取與資料庫的版本、重新載入快取、登出所有裝置、操作紀錄)。 |
 
 ### 系統架構
 
@@ -31,11 +31,12 @@
 ```
 mama-fufood/                     ← meta-repo,本機開發統一入口,本身不部署
 ├── mama-fufood-app/             ← Flutter Android App,本機打包、用 adb 安裝
-├── mama-fufood-backend/         ← 後端 API,部署到 Render(Flask + gunicorn)
-└── mama-fufood-web/             ← 本 repo,部署到 GitHub Pages(純靜態 HTML/CSS/JS)
+├── mama-fufood-web/             ← 本 repo,部署到 GitHub Pages(純靜態 HTML/CSS/JS)
+└── router-backend/              ← 好幾個專案共用的後端,部署到 Render(Flask + gunicorn);
+                                    本專案的程式在 apps/mama_fufood/,網址掛在 /mama-fufood
 ```
 
-沒有任何前端框架或建置流程,`.html`、`.css`、`.js` 直接交給 GitHub Pages。唯一的外部 script 是 Google Identity Services(Google 登入的按鈕);管理後台的資料都向 `mama-fufood-backend` 的 `/api/admin/*` 讀寫。
+沒有任何前端框架或建置流程,`.html`、`.css`、`.js` 直接交給 GitHub Pages。唯一的外部 script 是 Google Identity Services(Google 登入的按鈕);管理後台的資料都向 router-backend 的 `/mama-fufood/api/admin/*` 讀寫。
 
 ### 前端的鎖只是方便,權限在後端
 
@@ -98,7 +99,7 @@ favicon.png、apple-touch-icon.png、icon_256.png   圖示
 
 ### 已知限制
 
-- **還沒有實際部署過**;`js/config.js` 的 Google 用戶端 ID 與 Google Play 網址都還是空的。
+- 還沒有上架 Google Play:`js/config.js` 的 `playUrl` 是空的,首頁顯示「目前尚未在 Google Play 上架」。
 - 沒有自動化測試,改了之後要自己在瀏覽器上點過一次。
 - 管理後台要後端醒著才能用;後端剛喚醒時,第一個動作可能要等將近一分鐘。
 - 本機預覽管理後台時,要暫時把 `js/config.js` 的後端網址改成本機的,並在 `index.html`、`admin.html` 的 `connect-src` 加上本機後端(見 SOP Part A),**改完記得改回來,不要提交**。
@@ -125,7 +126,7 @@ python3 -m http.server 8003
 1. 照 router-backend 的 README(「本機」一節)把後端跑起來:`http://localhost:5010`,媽媽記副食品在 `/mama-fufood` 底下。`router-backend/.env` 填好 `MAMA_FUFOOD__DATABASE_URL`(本機的資料庫)、`MAMA_FUFOOD__GOOGLE_CLIENT_ID`、`MAMA_FUFOOD__FIRST_ADMIN_EMAIL`、`MAMA_FUFOOD__SESSION_SECRET`,`MAMA_FUFOOD__ALLOWED_ORIGINS` 填 `http://localhost:8003`。
 2. Google Cloud 的「網頁應用程式」用戶端,「已授權的 JavaScript 來源」要有 `http://localhost:8003`。
 3. 暫時改 `js/config.js`:`apiBase` 改成 `http://localhost:5010/mama-fufood`、`googleClientId` 填網頁應用程式的用戶端 ID;再在 `index.html` 與 `admin.html` 的內容安全政策 `connect-src` 加上 `http://localhost:5010`(不加的話,瀏覽器會擋下對本機後端的請求)。**試完把這三個檔案都改回來,不要提交本機的網址。**
-4. 重新整理首頁 → 右上角用 `FIRST_ADMIN_EMAIL` 的帳號登入 → 出現「管理後台」。
+4. 重新整理首頁 → 右上角用 `MAMA_FUFOOD__FIRST_ADMIN_EMAIL` 的帳號登入 → 出現「管理後台」。
 
 按 `Control + C` 停止網頁伺服器。
 
@@ -151,7 +152,7 @@ GitHub 免費方案的 Pages 只能用在**公開**的 repo。
 | 欄位 | 必填? | 說明 |
 |---|---|---|
 | `apiBase` | **必填** | 後端網址(Render),例如 `https://router-backend-3hl2.onrender.com/mama-fufood`,**結尾不要斜線**。 |
-| `googleClientId` | **必填**(要用 Google 登入時) | Google Cloud「網頁應用程式」用戶端 ID(和後端的 `GOOGLE_CLIENT_ID` 是同一個)。空白時不顯示登入按鈕。 |
+| `googleClientId` | **必填**(要用 Google 登入時) | Google Cloud「網頁應用程式」用戶端 ID(和後端的 `MAMA_FUFOOD__GOOGLE_CLIENT_ID` 是同一個)。空白時不顯示登入按鈕。 |
 | `playUrl` | 選填 | 上架後填 Google Play 的網址;空白時首頁顯示「目前尚未在 Google Play 上架」。 |
 | `apkVersion` | 選填 | 首頁「下載最新版媽媽記副食品」連到 `mama-fufood-app` 的 GitHub Release `v<版本號>` 上的 `mama-fufood-<版本號>.apk`,旁邊顯示版本號。發新版時先建立 Release,再改這裡;空白時不顯示。 |
 
@@ -179,7 +180,7 @@ Three kinds of pages:
 |---|---|
 | `index.html` | Home: an introduction to the app, a "your data stays in your hands" explanation, downloads (not on Google Play yet). Tabs at the top switch, on the same page, to the terms of use, privacy policy and judgement-logic guide (the URL carries `?doc=`, so it can be shared directly). Google sign-in sits at the top right: signing in does nothing for regular users; only admins get an entry point to the admin console. |
 | `legal.html?doc=terms` / `privacy` / `judgement_guide` | Standalone pages for the terms of use, privacy policy and judgement-logic guide — the same content as the home page tabs. The app and the Google consent screen link to these URLs, so they stay; the privacy policy's public URL is what will go into Google Play when the app is listed. |
-| `admin.html` | Admin console with five tabs: public data (editing and publishing the food list and units), app version (force-update threshold and notice text), feedback, admins, and system (cache and database versions, reloading the cache). |
+| `admin.html` | Admin console with five tabs: public data (editing and publishing the food list and units), app version (force-update threshold and notice text), feedback, admins, and system (cache and database versions, reloading the cache, signing out everywhere, recent activity). |
 
 ### System Architecture
 
@@ -188,11 +189,12 @@ The whole project is a git meta-repo (`mama-fufood`) that wraps three independen
 ```
 mama-fufood/                     ← meta-repo, unified local-dev entry point, never deployed itself
 ├── mama-fufood-app/             ← Flutter Android app, built locally and installed via adb
-├── mama-fufood-backend/         ← backend API, deployed to Render (Flask + gunicorn)
-└── mama-fufood-web/             ← this repo, deployed to GitHub Pages (pure static HTML/CSS/JS)
+├── mama-fufood-web/             ← this repo, deployed to GitHub Pages (pure static HTML/CSS/JS)
+└── router-backend/              ← backend shared by several projects, deployed to Render (Flask + gunicorn);
+                                    this project's code is in apps/mama_fufood/, mounted at /mama-fufood
 ```
 
-There is no frontend framework or build step — the `.html`, `.css` and `.js` files are served directly by GitHub Pages. The only external script is Google Identity Services (the Google sign-in button); all admin-console data is read from and written to `mama-fufood-backend`'s `/api/admin/*`.
+There is no frontend framework or build step — the `.html`, `.css` and `.js` files are served directly by GitHub Pages. The only external script is Google Identity Services (the Google sign-in button); all admin-console data is read from and written to router-backend's `/mama-fufood/api/admin/*`.
 
 ### The Frontend Lock Is a Convenience; Permissions Live in the Backend
 
@@ -255,7 +257,7 @@ favicon.png, apple-touch-icon.png, icon_256.png   icons
 
 ### Known Limitations
 
-- **Not deployed yet**; the Google client ID and Google Play URL in `js/config.js` are still empty.
+- Not on Google Play yet: `playUrl` in `js/config.js` is empty, so the home page says it isn't available on Google Play yet.
 - No automated tests — after a change, click through it yourself in a browser.
 - The admin console only works while the backend is awake; right after the backend wakes, the first action may take close to a minute.
 - Previewing the admin console locally means temporarily pointing `js/config.js` at the local backend and adding it to `connect-src` in `index.html` and `admin.html` (see Setup Guide Part A) — **remember to change them back and never commit them**.
@@ -282,7 +284,7 @@ Don't change `8003` casually: Google sign-in matches the "Authorized JavaScript 
 1. Run the backend per the "本機" (local) section of router-backend's README: it listens on `http://localhost:5010`, with mama-fufood under `/mama-fufood`. In `router-backend/.env`, fill in `MAMA_FUFOOD__DATABASE_URL` (a local database), `MAMA_FUFOOD__GOOGLE_CLIENT_ID`, `MAMA_FUFOOD__FIRST_ADMIN_EMAIL` and `MAMA_FUFOOD__SESSION_SECRET`, and set `MAMA_FUFOOD__ALLOWED_ORIGINS` to `http://localhost:8003`.
 2. In Google Cloud, the "Web application" client's "Authorized JavaScript origins" must include `http://localhost:8003`.
 3. Temporarily edit `js/config.js`: set `apiBase` to `http://localhost:5010/mama-fufood` and `googleClientId` to the web application client ID; then add `http://localhost:5010` to `connect-src` in the Content Security Policy of `index.html` and `admin.html` (without it, the browser blocks requests to the local backend). **When you're done, change all three files back — never commit the local URL.**
-4. Refresh the home page → sign in at the top right with the `FIRST_ADMIN_EMAIL` account → "管理後台" (Admin console) appears.
+4. Refresh the home page → sign in at the top right with the `MAMA_FUFOOD__FIRST_ADMIN_EMAIL` account → "管理後台" (Admin console) appears.
 
 Press `Control + C` to stop the web server.
 
@@ -308,6 +310,6 @@ None of these are secrets (the client ID appears in the web page anyway), but ev
 | Field | Required? | Description |
 |---|---|---|
 | `apiBase` | **Required** | The backend URL (Render), e.g. `https://router-backend-3hl2.onrender.com/mama-fufood`, **no trailing slash**. |
-| `googleClientId` | **Required** (for Google sign-in) | The Google Cloud "Web application" client ID (the same one as the backend's `GOOGLE_CLIENT_ID`). When empty, no sign-in button is shown. |
+| `googleClientId` | **Required** (for Google sign-in) | The Google Cloud "Web application" client ID (the same one as the backend's `MAMA_FUFOOD__GOOGLE_CLIENT_ID`). When empty, no sign-in button is shown. |
 | `playUrl` | Optional | The Google Play URL once listed; when empty, the home page says "目前尚未在 Google Play 上架" (not on Google Play yet). |
 | `apkVersion` | Optional | The home page's "下載最新版媽媽記副食品" (download the latest version) link points to `mama-fufood-<version>.apk` on the `mama-fufood-app` GitHub Release `v<version>`, with the version shown next to it. For a new version, create the Release first, then change this; when empty, the link is hidden. |
