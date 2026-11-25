@@ -20,7 +20,7 @@
   let foodGroup = null;
   // 每次載入都拿一個序號;慢的舊回應回來時,序號已經不是最新的就丟掉,不蓋掉新的畫面
   // (快速連按篩選或連續編輯時,舊的回應可能比新的晚到)。
-  const gen = { data: 0, feedback: 0, detail: 0, system: 0 };
+  const gen = { data: 0, feedback: 0, detail: 0, audit: 0, system: 0 };
   let feedbackFilters = { kind: "", status: "", app_version: "", device_model: "", page: 1 };
 
   function message(text, kind) {
@@ -69,8 +69,8 @@
     const tab = ev.target.dataset && ev.target.dataset.tab;
     if (!tab) return;
     for (const b of $("tabs").querySelectorAll("button")) b.classList.toggle("active", b.dataset.tab === tab);
-    for (const t of ["data", "version", "feedback", "admins", "system"]) $("tab-" + t).hidden = t !== tab;
-    ({ data: loadData, version: loadVersion, feedback: loadFeedback, admins: loadAdmins, system: loadSystem })[tab]();
+    for (const t of ["data", "version", "feedback", "admins", "audit", "system"]) $("tab-" + t).hidden = t !== tab;
+    ({ data: loadData, version: loadVersion, feedback: loadFeedback, admins: loadAdmins, audit: loadAudit, system: loadSystem })[tab]();
   };
 
   // ── 公用資料 ────────────────────────────────────────────
@@ -351,39 +351,55 @@
     });
   }
 
-  // ── 系統 ────────────────────────────────────────────────
-  // 操作紀錄的動作代碼(後端 audit.py 的 ACTIONS),新增時兩邊一起加;不認得的代碼原樣顯示。
+  // ── 操作紀錄 ────────────────────────────────────────────
+  // 只能看:誰在什麼時候做了什麼、對哪一筆、結果如何。後端(router-backend 的 shared/audit_log.py)記下
+  // 這個後台的每一次修改(不論成功與否)與認得出帳號的拒絕,保留 180 天;不記內容與 IP。
+  // 動作是後端路由的名稱(apps/mama_fufood/admin_routes.py 的函式名稱);不認得的原樣顯示。
   const AUDIT_ACTIONS = {
     login: "登入", logout_all: "登出所有裝置",
-    group_create: "新增分組", group_update: "修改分組", group_delete: "刪除分組",
-    food_create: "新增食材", food_update: "修改食材", food_delete: "刪除食材",
-    unit_create: "新增單位", unit_update: "修改單位", unit_delete: "刪除單位",
-    publish: "發布公用資料", cache_reload: "重新載入快取", app_config_update: "修改 App 版本設定",
-    feedback_update: "更新意見回饋", feedback_delete: "刪除意見回饋", feedback_delete_by_email: "個資刪除請求",
-    admin_add: "新增管理員", admin_remove: "移除管理員",
+    create_group: "新增分組", update_group: "修改分組", delete_group: "刪除分組",
+    create_food: "新增食材", update_food: "修改食材", delete_food: "刪除食材",
+    create_unit: "新增單位", update_unit: "修改單位", delete_unit: "刪除單位",
+    publish: "發布公用資料", reload_cache: "重新載入快取", put_app_config: "修改 App 版本設定",
+    update_feedback: "更新意見回饋", delete_feedback: "刪除意見回饋", delete_feedback_by_email: "個資刪除請求",
+    add_admin: "新增管理員", remove_admin: "移除管理員",
   };
-  const auditDetail = (d) => Object.entries(d || {})
-    .map(([k, v]) => `${k}=${typeof v === "string" ? v : JSON.stringify(v)}`).join(", ");
+  const AUDIT_RESULTS = { ok: "成功", denied: "被拒", failed: "失敗" };
+  const AUDIT_PAGE = 50;  // 和後端 GET /api/admin/audit 一頁的筆數一樣
+  let auditRows = [];
 
-  function auditCards(a) {
-    const rows = a.items.map((i) => `<tr><td>${esc(fmtTime(i.at))}</td><td>${esc(i.email)}</td>
-      <td>${esc(AUDIT_ACTIONS[i.action] || i.action)}</td><td>${esc(auditDetail(i.detail))}</td></tr>`).join("");
-    return `<div class="card"><h3 style="margin-top:0">登入狀態</h3>
-        <p class="muted">懷疑後台的登入狀態外流（例如在別人的電腦登入過）時，可以登出這個帳號在所有瀏覽器上的後台，包含這一台。</p>
-        <button id="logout-all" class="danger">登出所有裝置</button>
-      </div>
-      <div class="card"><h3 style="margin-top:0">操作紀錄</h3>
-        <p class="muted">最近 ${esc(a.items.length)} 筆，保留 ${esc(a.retention_days)} 天；不記 IP。</p>
-        ${a.items.length ? `<div class="scroll-x"><table><thead><tr><th>時間</th><th>管理員</th><th>動作</th><th>內容</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="muted">還沒有紀錄。</p>'}
+  async function loadAudit(more) {
+    const mine = ++gen.audit;
+    await run(async () => {
+      const last = more && auditRows.length ? auditRows[auditRows.length - 1].id : null;
+      const data = await api.call("GET", "/api/admin/audit" + (last ? "?before=" + encodeURIComponent(last) : ""));
+      if (mine !== gen.audit) return;
+      auditRows = more ? auditRows.concat(data.items) : data.items;
+      const label = (a) => AUDIT_ACTIONS[String(a).split(".").pop()] || a;
+      const rows = auditRows.map((r) => `<tr><td>${esc(fmtTime(r.at))}</td><td>${esc(r.actor || "-")}</td>
+        <td>${esc(label(r.action))}</td><td>${esc(r.target || "-")}</td>
+        <td${r.result === "ok" ? "" : ' class="warn"'}>${esc(AUDIT_RESULTS[r.result] || r.result)}</td></tr>`).join("");
+      $("tab-audit").innerHTML = `<div class="card">
+        <p class="muted">只能看，不能改或刪；保留 180 天，不記內容與 IP。</p>
+        ${auditRows.length ? `<div class="scroll-x"><table><thead><tr><th>時間</th><th>帳號</th><th>動作</th><th>對象</th><th>結果</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="muted">還沒有紀錄。</p>'}
+        ${data.items.length === AUDIT_PAGE ? '<p><button id="audit-more">載入更早的</button></p>' : ""}
       </div>`;
+      const moreBtn = $("audit-more");
+      if (moreBtn) moreBtn.onclick = () => loadAudit(true);
+    });
   }
+
+  // ── 系統 ────────────────────────────────────────────────
+  const SESSIONS_CARD = `<div class="card"><h3 style="margin-top:0">登入狀態</h3>
+      <p class="muted">懷疑後台的登入狀態外流（例如在別人的電腦登入過）時，可以登出這個帳號在所有瀏覽器上的後台，包含這一台。</p>
+      <button id="logout-all" class="danger">登出所有裝置</button>
+    </div>`;
 
   async function loadSystem() {
     const mine = ++gen.system;
     await run(async () => {
       const o = await api.call("GET", "/api/admin/overview");
       const f = await api.call("GET", "/api/admin/formats");
-      const a = await api.call("GET", "/api/admin/audit");
       if (mine !== gen.system) return;
       const cache = o.cache.loaded ? Object.entries(o.cache.datasets).map(([k, v]) => `${k}=${v}`).join("、") : "還沒載入";
       const db = Object.entries(o.releases).map(([k, v]) => `${k}=${v.version}`).join("、");
@@ -398,7 +414,7 @@
         ${f.formats.map((x) => `<details><summary>第 ${x.format_version} 版（${esc(x.status)}，最低 App ${esc(x.min_app_version)}）</summary>
           <pre class="log">${esc(JSON.stringify(x.definition, null, 1))}</pre></details>`).join("")}
       </div>
-      ${auditCards(a)}`;
+      ${SESSIONS_CARD}`;
       $("reload-cache").onclick = () => run(async () => { await api.call("POST", "/api/admin/cache/reload"); await loadSystem(); }, "已重新載入");
       $("logout-all").onclick = () => {
         if (!confirm("確定登出這個帳號在所有瀏覽器上的後台？這一台也會登出。")) return;

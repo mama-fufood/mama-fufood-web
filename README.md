@@ -22,7 +22,7 @@
 |---|---|
 | `index.html` | 首頁:App 的介紹、「你的資料只在你手上」的說明、下載(目前尚未上架)。上方的頁籤可以在同一頁切換到使用者條款、隱私權政策、判斷邏輯說明(網址會帶 `?doc=`,可以直接分享)。右上角可以用 Google 登入:一般使用者登入沒有作用;管理員登入後才出現「管理後台」的入口。 |
 | `legal.html?doc=terms` / `privacy` / `judgement_guide` | 使用者條款、隱私權政策、判斷邏輯說明的單獨頁面,內容和首頁頁籤是同一份。App 與 Google 同意畫面連的是這個網址,所以保留;隱私權政策的公開網址,將來上架時要填進 Google Play。 |
-| `admin.html` | 管理後台,五個分頁:公用資料(食材清單與單位的編輯、發布)、App 版本(強制更新門檻與提示文字)、意見回饋、管理員、系統(快取與資料庫的版本、重新載入快取、登出所有裝置、操作紀錄)。 |
+| `admin.html` | 管理後台,六個分頁:公用資料(食材清單與單位的編輯、發布)、App 版本(強制更新門檻與提示文字)、意見回饋、管理員、操作紀錄(只能看)、系統(快取與資料庫的版本、重新載入快取、登出所有裝置)。 |
 
 ### 系統架構
 
@@ -60,7 +60,7 @@ Google 的 ID token 大約一小時就過期,不能當長期憑證,否則後台�
 - session token 存在這個瀏覽器的 `localStorage`;滑動式有效期,連續 90 天沒用才過期。後端回 401 時就清掉,讓使用者重新登入。
 - 首頁的 Google 登入,憑證也只送到後端確認是不是管理員,用完即丟(隱私權政策第二條寫明)。
 - 「系統」分頁有「登出所有裝置」:這個帳號在所有瀏覽器上的後台 session 一次失效(包含這一台),懷疑登入狀態外流時用。
-- 「系統」分頁也列出最近的操作紀錄:哪位管理員、什麼時候、做了什麼(後端保留 365 天,不記 IP)。
+- 「操作紀錄」分頁只能看:後台的每一次修改(不論成功與否)與被拒絕的請求,記下時間、帳號、動作、對象與結果(後端保留 180 天,不記內容與 IP)。
 
 ### 條款與政策是 Markdown,和 App 內建的是同一份
 
@@ -180,7 +180,7 @@ Three kinds of pages:
 |---|---|
 | `index.html` | Home: an introduction to the app, a "your data stays in your hands" explanation, downloads (not on Google Play yet). Tabs at the top switch, on the same page, to the terms of use, privacy policy and judgement-logic guide (the URL carries `?doc=`, so it can be shared directly). Google sign-in sits at the top right: signing in does nothing for regular users; only admins get an entry point to the admin console. |
 | `legal.html?doc=terms` / `privacy` / `judgement_guide` | Standalone pages for the terms of use, privacy policy and judgement-logic guide — the same content as the home page tabs. The app and the Google consent screen link to these URLs, so they stay; the privacy policy's public URL is what will go into Google Play when the app is listed. |
-| `admin.html` | Admin console with five tabs: public data (editing and publishing the food list and units), app version (force-update threshold and notice text), feedback, admins, and system (cache and database versions, reloading the cache, signing out everywhere, recent activity). |
+| `admin.html` | Admin console with six tabs: public data (editing and publishing the food list and units), app version (force-update threshold and notice text), feedback, admins, activity log (read-only), and system (cache and database versions, reloading the cache, signing out everywhere). |
 
 ### System Architecture
 
@@ -218,7 +218,7 @@ Google ID tokens expire after roughly an hour, so they can't be used as a long-l
 - The session token is stored in this browser's `localStorage`, with sliding expiry: it only expires after 90 consecutive days without use. When the backend answers 401 it is cleared so the user signs in again.
 - Google sign-in on the home page also only sends the credential to the backend to check whether this is an admin, and then discards it (stated in section 2 of the privacy policy).
 - The System tab has "登出所有裝置" (sign out everywhere): it ends this account's admin sessions in every browser at once, including this one. Use it if you suspect a sign-in has leaked.
-- The System tab also lists recent activity: which admin did what and when (the backend keeps it for 365 days and records no IP addresses).
+- The activity log tab is read-only: every change made in the console (successful or not) and every refused request, with the time, account, action, target and result (the backend keeps it for 180 days and records no content or IP addresses).
 
 ### Terms and Policies Are Markdown, Identical to the App's Built-In Copy
 

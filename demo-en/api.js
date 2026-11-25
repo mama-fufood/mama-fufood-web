@@ -91,6 +91,13 @@
     };
   }
 
+  // 操作紀錄:最新的在前面,一頁 50 筆,?before=<id> 看更早的。
+  function auditPage(query) {
+    const before = parseInt(new URLSearchParams(query).get("before") || "", 10);
+    const rows = (fx.audit || []).filter((r) => !(before > 0) || r.id < before);
+    return { items: rows.slice(0, 50) };
+  }
+
   async function call(method, path, body) {
     await new Promise((r) => setTimeout(r, 150));
     const [route, query = ""] = path.split("?");
@@ -107,7 +114,7 @@
       if (route === "/api/admin/formats") return { formats: catalog.formats };
       if (route === "/api/admin/admins") return { admins: fx.admins };
       if (route === "/api/admin/feedback") return feedbackList(query);
-      if (route === "/api/admin/audit") return { items: fx.audit || [], retention_days: 365 };
+      if (route === "/api/admin/audit") return auditPage(query);
       const m = route.match(/^\/api\/admin\/feedback\/(.+)$/);
       if (m) {
         const f = fx.feedback.find((x) => x.id === m[1]);

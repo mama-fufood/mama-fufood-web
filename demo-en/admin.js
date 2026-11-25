@@ -21,7 +21,7 @@
   let foodGroup = null;
   // 每次載入都拿一個序號;慢的舊回應回來時,序號已經不是最新的就丟掉,不蓋掉新的畫面
   // (快速連按篩選或連續編輯時,舊的回應可能比新的晚到)。
-  const gen = { data: 0, feedback: 0, detail: 0, system: 0 };
+  const gen = { data: 0, feedback: 0, detail: 0, audit: 0, system: 0 };
   let feedbackFilters = { kind: "", status: "", app_version: "", device_model: "", page: 1 };
 
   function message(text, kind) {
@@ -70,8 +70,8 @@
     const tab = ev.target.dataset && ev.target.dataset.tab;
     if (!tab) return;
     for (const b of $("tabs").querySelectorAll("button")) b.classList.toggle("active", b.dataset.tab === tab);
-    for (const t of ["data", "version", "feedback", "admins", "system"]) $("tab-" + t).hidden = t !== tab;
-    ({ data: loadData, version: loadVersion, feedback: loadFeedback, admins: loadAdmins, system: loadSystem })[tab]();
+    for (const t of ["data", "version", "feedback", "admins", "audit", "system"]) $("tab-" + t).hidden = t !== tab;
+    ({ data: loadData, version: loadVersion, feedback: loadFeedback, admins: loadAdmins, audit: loadAudit, system: loadSystem })[tab]();
   };
 
   // ── 公用資料 ────────────────────────────────────────────
@@ -352,39 +352,55 @@
     });
   }
 
-  // ── 系統 ────────────────────────────────────────────────
-  // 操作紀錄的動作代碼(後端 audit.py 的 ACTIONS),新增時兩邊一起加;不認得的代碼原樣顯示。
+  // ── 操作紀錄 ────────────────────────────────────────────
+  // 只能看:誰在什麼時候做了什麼、對哪一筆、結果如何。後端(router-backend 的 shared/audit_log.py)記下
+  // 這個後台的每一次修改(不論成功與否)與認得出帳號的拒絕,保留 180 天;不記內容與 IP。
+  // 動作是後端路由的名稱(apps/mama_fufood/admin_routes.py 的函式名稱);不認得的原樣顯示。
   const AUDIT_ACTIONS = {
     login: "Signed in", logout_all: "Signed out everywhere",
-    group_create: "Group added", group_update: "Group changed", group_delete: "Group deleted",
-    food_create: "Food added", food_update: "Food changed", food_delete: "Food deleted",
-    unit_create: "Unit added", unit_update: "Unit changed", unit_delete: "Unit deleted",
-    publish: "Shared data published", cache_reload: "Cache reloaded", app_config_update: "App version settings changed",
-    feedback_update: "Feedback updated", feedback_delete: "Feedback deleted", feedback_delete_by_email: "Personal data deletion request",
-    admin_add: "Admin added", admin_remove: "Admin removed",
+    create_group: "Group added", update_group: "Group changed", delete_group: "Group deleted",
+    create_food: "Food added", update_food: "Food changed", delete_food: "Food deleted",
+    create_unit: "Unit added", update_unit: "Unit changed", delete_unit: "Unit deleted",
+    publish: "Shared data published", reload_cache: "Cache reloaded", put_app_config: "App version settings changed",
+    update_feedback: "Feedback updated", delete_feedback: "Feedback deleted", delete_feedback_by_email: "Personal data deletion request",
+    add_admin: "Admin added", remove_admin: "Admin removed",
   };
-  const auditDetail = (d) => Object.entries(d || {})
-    .map(([k, v]) => `${k}=${typeof v === "string" ? v : JSON.stringify(v)}`).join(", ");
+  const AUDIT_RESULTS = { ok: "OK", denied: "Denied", failed: "Failed" };
+  const AUDIT_PAGE = 50;  // 和後端 GET /api/admin/audit 一頁的筆數一樣
+  let auditRows = [];
 
-  function auditCards(a) {
-    const rows = a.items.map((i) => `<tr><td>${esc(fmtTime(i.at))}</td><td>${esc(i.email)}</td>
-      <td>${esc(AUDIT_ACTIONS[i.action] || i.action)}</td><td>${esc(auditDetail(i.detail))}</td></tr>`).join("");
-    return `<div class="card"><h3 style="margin-top:0">Sign-in sessions</h3>
-        <p class="muted">If you suspect an admin sign-in has leaked (for example, you signed in on someone else's computer), sign this account out of the admin console in every browser, including this one.</p>
-        <button id="logout-all" class="danger">Sign out everywhere</button>
-      </div>
-      <div class="card"><h3 style="margin-top:0">Activity log</h3>
-        <p class="muted">Latest ${esc(a.items.length)} entries, kept for ${esc(a.retention_days)} days; no IP addresses are recorded.</p>
-        ${a.items.length ? `<div class="scroll-x"><table><thead><tr><th>Time</th><th>Admin</th><th>Action</th><th>Details</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="muted">No entries yet.</p>'}
+  async function loadAudit(more) {
+    const mine = ++gen.audit;
+    await run(async () => {
+      const last = more && auditRows.length ? auditRows[auditRows.length - 1].id : null;
+      const data = await api.call("GET", "/api/admin/audit" + (last ? "?before=" + encodeURIComponent(last) : ""));
+      if (mine !== gen.audit) return;
+      auditRows = more ? auditRows.concat(data.items) : data.items;
+      const label = (a) => AUDIT_ACTIONS[String(a).split(".").pop()] || a;
+      const rows = auditRows.map((r) => `<tr><td>${esc(fmtTime(r.at))}</td><td>${esc(r.actor || "-")}</td>
+        <td>${esc(label(r.action))}</td><td>${esc(r.target || "-")}</td>
+        <td${r.result === "ok" ? "" : ' class="warn"'}>${esc(AUDIT_RESULTS[r.result] || r.result)}</td></tr>`).join("");
+      $("tab-audit").innerHTML = `<div class="card">
+        <p class="muted">Read-only: entries can't be changed or deleted. Kept for 180 days; no content or IP addresses are recorded.</p>
+        ${auditRows.length ? `<div class="scroll-x"><table><thead><tr><th>Time</th><th>Account</th><th>Action</th><th>Target</th><th>Result</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="muted">No entries yet.</p>'}
+        ${data.items.length === AUDIT_PAGE ? '<p><button id="audit-more">Load older entries</button></p>' : ""}
       </div>`;
+      const moreBtn = $("audit-more");
+      if (moreBtn) moreBtn.onclick = () => loadAudit(true);
+    });
   }
+
+  // ── 系統 ────────────────────────────────────────────────
+  const SESSIONS_CARD = `<div class="card"><h3 style="margin-top:0">Sign-in sessions</h3>
+      <p class="muted">If you suspect an admin sign-in has leaked (for example, you signed in on someone else's computer), sign this account out of the admin console in every browser, including this one.</p>
+      <button id="logout-all" class="danger">Sign out everywhere</button>
+    </div>`;
 
   async function loadSystem() {
     const mine = ++gen.system;
     await run(async () => {
       const o = await api.call("GET", "/api/admin/overview");
       const f = await api.call("GET", "/api/admin/formats");
-      const a = await api.call("GET", "/api/admin/audit");
       if (mine !== gen.system) return;
       const cache = o.cache.loaded ? Object.entries(o.cache.datasets).map(([k, v]) => `${k}=${v}`).join(", ") : "not loaded yet";
       const db = Object.entries(o.releases).map(([k, v]) => `${k}=${v.version}`).join(", ");
@@ -399,7 +415,7 @@
         ${f.formats.map((x) => `<details><summary>Version ${x.format_version} (${esc(x.status)}, minimum App ${esc(x.min_app_version)})</summary>
           <pre class="log">${esc(JSON.stringify(x.definition, null, 1))}</pre></details>`).join("")}
       </div>
-      ${auditCards(a)}`;
+      ${SESSIONS_CARD}`;
       $("reload-cache").onclick = () => run(async () => { await api.call("POST", "/api/admin/cache/reload"); await loadSystem(); }, "Reloaded");
       $("logout-all").onclick = () => {
         if (!confirm("Sign this account out of the admin console in every browser? This browser will be signed out too.")) return;

@@ -21,10 +21,11 @@ window.MFF_DEMO_FIXTURES = {
     { email: "helper@example.com", note: "協助維護食材清單", created_at: "2026-10-25T02:00:00+00:00", created_by: "admin@example.com", fixed: false },
   ],
   audit: [
-    { at: "2026-11-02T01:10:00+00:00", email: "admin@example.com", action: "publish", detail: { dataset: "food_list", version: "20261024112425" } },
-    { at: "2026-11-02T01:08:00+00:00", email: "admin@example.com", action: "food_update", detail: { id: 12, disabled: true } },
-    { at: "2026-11-02T01:05:00+00:00", email: "admin@example.com", action: "login", detail: {} },
-    { at: "2026-10-25T02:00:00+00:00", email: "admin@example.com", action: "admin_add", detail: { email: "helper@example.com" } },
+    { id: 5, at: "2026-11-02T01:10:00+00:00", actor: "admin@example.com", action: "admin.publish", target: "dataset=food_list", result: "ok" },
+    { id: 4, at: "2026-11-02T01:08:00+00:00", actor: "admin@example.com", action: "admin.update_food", target: "item_id=12", result: "ok" },
+    { id: 3, at: "2026-11-02T01:07:00+00:00", actor: "admin@example.com", action: "admin.create_food", target: "", result: "failed" },
+    { id: 2, at: "2026-11-02T01:05:00+00:00", actor: "admin@example.com", action: "admin.login", target: "", result: "ok" },
+    { id: 1, at: "2026-10-25T02:00:00+00:00", actor: "admin@example.com", action: "admin.add_admin", target: "helper@example.com", result: "ok" },
   ],
   feedback: [
     {
