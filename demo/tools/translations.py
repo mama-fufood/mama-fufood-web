@@ -90,7 +90,7 @@ HOME = [
 # 中文改了,build.py 會報錯,重翻對應的英文檔之後再更新這裡的值(build.py 會印出新的值)。
 LEGAL_SOURCES = {
     "terms": "acbfa5766c2aba9c49391f512a0e8d0d7015d7acf58c4c5e5c069b9be1d01e6b",
-    "privacy": "9e3c295f1ee6d6cb7e6b0a26f80f25e82831a5953e58966c28478947197db886",
+    "privacy": "ae2faaf142415efaab1f4445e31e9851c62c7ef2665bc562e115bf03b303a3cf",
     "judgement_guide": "7eb25c886f40af23f12e51cd046c9ed442fe41a8829893c4645052e843b21f6e",
 }
 

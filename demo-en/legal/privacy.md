@@ -1,6 +1,6 @@
 > **This English translation is provided for demonstration only. If it differs from the Traditional Chinese version, the Traditional Chinese version prevails.**
 
-Effective date: October 24, 2026
+Effective date: November 26, 2026
 
 ## In one sentence
 
@@ -19,12 +19,13 @@ Each feature is described separately. **We do not collect any data that is not l
 | Log records on your phone without signing in | Only on your phone | Nothing | — |
 | Sign in with a Google account | Google gives the App your account email, name and profile picture, which the App uses to show which account you are signed in with. The App then sends the sign-in credential to our server in exchange for a "sign-in pass" (containing your Google account's permanent ID, email and expiry time, signed by us to prevent forgery). The pass is stored on your phone and used for update checks, feedback and format conversion | The sign-in credential (containing your Google account's permanent ID and email), used only to issue the pass | Account details and the pass stay on your phone and are cleared when you sign out. The pass lasts up to 180 days and is extended automatically while you use the App. The server keeps neither the sign-in credential nor the pass |
 | Check for shared data updates (after signing in; automatically when the App opens, or manually) | Sent to our server | The sign-in pass (containing your Google account's permanent ID and email), the App version and platform (Android or iOS), the data format versions the App supports, and the versions of shared data on your phone | Used to confirm your identity and reply with updates, then discarded and never written to the database. The server only remembers in memory how many times this account has checked today (counted by the account's permanent ID), cleared every day at midnight Taipei time |
-| Turn on "Sync records to cloud" or "Save photos to cloud" | Stored in an area of **your own** Google Drive that only the App can read | Our server receives nothing | Kept by your Google account until you delete it |
+| Turn on "Sync records to cloud" | Stored in an area of **your own** Google Drive that only the App can read (you cannot see it in Drive) | Our server receives nothing | Kept by your Google account until you delete it |
+| Turn on "Save photos to cloud" | Stored in the photos folder inside the App's own folder in **your own** Google Drive, where you can see and delete them yourself; location and other embedded details are removed before upload, and file names are random IDs | Our server receives nothing | Kept by your Google account until you delete it. Once a photo is uploaded, the original is not kept on the phone, so if you delete a photo in Drive, the App cannot show it either |
 | Export | Encrypted and saved to **your own** Google Drive (in the App's own folder); the key is stored in an area of Google Drive that only the App can read | Our server receives nothing and never gets the key | Kept by you |
 | Import an export file from an older version whose format is not compatible | After decrypting on your phone, the App temporarily sends the record data (baby names and record contents, **without photos or email**) to our server to convert the format | This record data and the sign-in pass | **Not kept before or after conversion, and the contents are not logged.** Each account can convert up to 5 times per day; the count is kept only in server memory |
-| Send feedback | Sent to our server and stored in the database | See Section 3 | Up to 90 days; may be deleted earlier once debugging is done |
+| Send feedback | Sent to our server and stored in the database | See Section 3 | Up to 90 days; may be deleted earlier once debugging is done. In addition, the server remembers in memory how many times this account has tried to send feedback today (counted by the account's permanent ID), cleared every day at midnight Taipei time and never written to the database |
 | Usage logs on your phone | Only on your phone | We receive nothing (unless you send feedback) | Deleted automatically after 7 days |
-| Sign in with Google on the website (the sign-in button on the home page) | The sign-in credential is sent to our server to check whether you are an administrator | The sign-in credential (containing your Google account's permanent ID and email) | Discarded after use and never written to the database; only administrators keep a signed-in session for the admin console |
+| Sign in with Google on the website (the sign-in button on the home page) | The sign-in credential is sent to our server to check whether you are an administrator | The sign-in credential (containing your Google account's permanent ID and email) | Discarded after use and never written to the database. The server remembers in memory how many times this account has tried to sign in today (counted by the account's permanent ID), cleared every day at midnight Taipei time. Administrators keep a signed-in session and an activity log for the admin console (time, account, what was done and the result; no contents or IP addresses; kept for 180 days); if a removed administrator connects again with an old session, one refused entry is recorded too |
 | The App crashes | Android: if your phone settings allow sharing diagnostic data with Google, Google Play gives us crash statistics that do not identify you. iPhone: if you allow "Share with App Developers" for analytics in your phone settings and the App was installed from the App Store or TestFlight, Apple gives us crash reports that do not identify you | Statistics or reports that do not identify you | As set by Google Play or Apple |
 
 In addition, our hosting provider (Render) keeps connection records in its system logs for 7 days; its official documentation does not say whether these include your IP address. We do not keep IP addresses ourselves, and our program logs do not record email addresses or sign-in credentials.
@@ -61,8 +62,8 @@ The App uses your Google data in accordance with the Google API Services User Da
 | Permission | Purpose | When it is requested |
 |---|---|---|
 | Basic profile (email, name, profile picture) and authentication | Sign-in, showing your account in the App, update checks, contact details for feedback | When you tap sign in |
-| Access only to the App's own Drive data area (`drive.appdata`) | Record sync, photos in the cloud, storing the export file key | When you turn on cloud features or export or import for the first time (requested only when needed) |
-| Access only to files created by the App or chosen by you (`drive.file`) | Saving and reading export files | When you export or import for the first time (requested only when needed) |
+| Access only to the App's own Drive data area (`drive.appdata`) | Record sync, storing the export file key | When you turn on cloud features or export or import for the first time (requested only when needed) |
+| Access only to files created by the App or chosen by you (`drive.file`) | Saving and reading export files, photos in the cloud | When you turn on cloud features or export or import for the first time (requested only when needed) |
 
 The App does not read any other files in your Google Drive. We (the developers) do not read the data in your Google Drive; it is read and written only by the App on your phone.
 
@@ -87,7 +88,7 @@ The App's users are parents and caregivers, not children. The baby data you reco
 
 - All connections between your phone and our server use encryption (HTTPS).
 - Export files are fully encrypted, and the key is stored only in your own Google Drive.
-- The server keeps only feedback; all other data is processed in memory and discarded after use.
+- The server keeps only feedback, plus administrators' signed-in sessions and activity log; all other data is processed in memory and discarded after use.
 - Only our administrators can view feedback.
 
 ## 11. Changes to this Policy
